@@ -14,4 +14,12 @@ public class Utils {
     public static void error(Object o) {
         System.out.println("ERROR: " + o);
     }
+
+    public static Long createUniqueStackFrameId(Long threadId, Long stackFrameId) {
+        return Cantor.pair(threadId, stackFrameId);
+    }
+
+    public static long[] computeThreadAndStackFrameIds(Long uniqueStackFrameId) {
+        return Cantor.depair(uniqueStackFrameId);
+    }
 }

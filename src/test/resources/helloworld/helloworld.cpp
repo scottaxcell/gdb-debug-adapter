@@ -2,9 +2,9 @@
 using namespace std;
 
 void foo();
+int fubar();
 
-int main() 
-{
+int main() {
   cout << "Hello, World!" << endl;
 
   foo();
@@ -13,11 +13,21 @@ int main()
     cout << "loop: " << i << endl;
   }
 
-  cout << "Goodbye, Cruel World!" << endl;
+  int numFubars = fubar();
+  cout << "# of fubars = " << numFubars << endl;
+
+  cout << "Goodbye, World!" << endl;
+
   return 0;
 }
 
 void foo() {
   int numPlanets = 8;
-  cout << "function foo" << endl;
+  const char* nameOfThirdPlanet = "Earth";
+  cout << "function foo called" << endl;
+}
+
+int fubar() {
+  cout << "function fubar called" << endl;
+  return -42;
 }

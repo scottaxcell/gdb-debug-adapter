@@ -3,14 +3,14 @@ package com.coherentchaos.gdb.debugadapter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-public class Target {
+public class ExecutionTarget {
     private Path path;
 
-    public Target(String target) {
+    public ExecutionTarget(String target) {
         this.path = Paths.get(target);
     }
 
-    public Target(Path path) {
+    public ExecutionTarget(Path path) {
         this.path = path;
     }
 

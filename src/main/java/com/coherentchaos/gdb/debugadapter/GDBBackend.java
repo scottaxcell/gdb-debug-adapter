@@ -10,14 +10,14 @@ import java.util.Arrays;
 import java.util.List;
 
 public class GDBBackend {
-    // cmd: gdb -q -nw -i mi2 target
+    // cmd: gdb -q -nw -i mi2 executionTarget
     // -q: quiet, -nw: no windows i: interpreter (mi2 in our case)
     private static String[] baseCmdLine = {"gdb", "-q", "-nw", "-i", "mi2"};
     private Process gdbProcess;
-    private Target target;
+    private ExecutionTarget executionTarget;
 
-    public GDBBackend(Target target) {
-        this.target = target;
+    public GDBBackend(ExecutionTarget executionTarget) {
+        this.executionTarget = executionTarget;
     }
 
     public InputStream getInputStream() {
@@ -51,7 +51,7 @@ public class GDBBackend {
     private String[] getCmdLine() {
         List<String> cmdLine = new ArrayList<>();
         cmdLine.addAll(Arrays.asList(baseCmdLine));
-        cmdLine.add(target.getPath().toString());
+        cmdLine.add(executionTarget.getPath().toString());
         return cmdLine.toArray(new String[cmdLine.size()]);
     }
 

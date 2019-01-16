@@ -36,7 +36,7 @@ public class GDBDebugServer implements IDebugProtocolServer {
      * Commands that have been read from the GDB stream
      */
     private final Map<Integer, CommandWrapper> readCommands = Collections.synchronizedMap(new HashMap<>());
-    private Target target;
+    private ExecutionTarget executionTarget;
     private GDBBackend backend;
     private GDBReaderThread gdbReaderThread;
     private GDBWriterThread gdbWriterThread;
@@ -63,12 +63,12 @@ public class GDBDebugServer implements IDebugProtocolServer {
         // not allowed
     }
 
-    public GDBDebugServer(Target target) {
-        this.target = target;
+    public GDBDebugServer(ExecutionTarget executionTarget) {
+        this.executionTarget = executionTarget;
     }
 
-    public GDBDebugServer(Target target, IDebugProtocolClient client) {
-        this.target = target;
+    public GDBDebugServer(ExecutionTarget executionTarget, IDebugProtocolClient client) {
+        this.executionTarget = executionTarget;
         this.client = client;
         eventProcessor.setClient(client);
     }
@@ -82,7 +82,7 @@ public class GDBDebugServer implements IDebugProtocolServer {
     public CompletableFuture<Capabilities> initialize(InitializeRequestArguments args) {
         Utils.debug("initialize");
 
-        backend = new GDBBackend(target);
+        backend = new GDBBackend(executionTarget);
         backend.startGDB();
 
         gdbReaderThread = new GDBReaderThread(backend.getInputStream());
@@ -336,8 +336,8 @@ public class GDBDebugServer implements IDebugProtocolServer {
         StackTraceResponse response = OutputParser.parseStackListFramesResponse(output);
         for (StackFrame stackFrame : response.getStackFrames()) {
             Long stackFrameId = stackFrame.getId();
-            Long pair = Cantor.pair(threadId, stackFrameId);
-            stackFrame.setId(pair);
+            Long uniqueStackFrameId = Utils.createUniqueStackFrameId(threadId, stackFrameId);
+            stackFrame.setId(uniqueStackFrameId);
         }
         return response;
     }
@@ -364,10 +364,10 @@ public class GDBDebugServer implements IDebugProtocolServer {
         String variablesReference = variablesReferenceMap.get(args.getVariablesReference());
         String[] tmp = variablesReference.split("_");
         String type = tmp[0];
-        Long cantorPair = Long.valueOf(tmp[1]);
-        long[] cantorDepair = Cantor.depair(cantorPair);
-        Long threadId = cantorDepair[0];
-        Long frameId = cantorDepair[1];
+        Long uniqueStackFrameId = Long.valueOf(tmp[1]);
+        long[] threadAndStackFrameIds = Utils.computeThreadAndStackFrameIds(uniqueStackFrameId);
+        Long threadId = threadAndStackFrameIds[0];
+        Long frameId = threadAndStackFrameIds[1];
 
         ThreadSelectCommand threadSelectCommand = commandFactory.createThreadSelect(threadId);
         queueCommand(threadSelectCommand);

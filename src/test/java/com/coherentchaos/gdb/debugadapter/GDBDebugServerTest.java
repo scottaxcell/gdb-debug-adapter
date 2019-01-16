@@ -1,11 +1,12 @@
 package com.coherentchaos.gdb.debugadapter;
 
+import com.coherentchaos.gdb.debugadapter.utils.Cantor;
+import com.coherentchaos.gdb.debugadapter.utils.Utils;
 import org.eclipse.lsp4j.debug.*;
 import org.eclipse.lsp4j.debug.launch.DSPLauncher;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
-import org.eclipse.lsp4j.jsonrpc.services.ServiceEndpoints;
 import org.junit.Assert;
 
 import java.io.File;
@@ -27,7 +28,7 @@ public class GDBDebugServerTest {
     private final String TEST_CASE_DIR = this.getClass().getResource("/helloworld").getPath();
     private final String SOURCE_FILENAME = this.getClass().getResource("/helloworld/helloworld.cpp").getPath();
     private final String TARGET_FILENAME = String.format("%s/helloworld", TEST_CASE_DIR);
-    private Target target = new Target(TARGET_FILENAME);
+    private ExecutionTarget executionTarget = new ExecutionTarget(TARGET_FILENAME);
     private GDBDebugServer server;
     private Launcher<IDebugProtocolClient> serverLauncher;
     private Future<?> serverListening;
@@ -64,7 +65,7 @@ public class GDBDebugServerTest {
         inClient.connect(outServer);
         outClient.connect(inServer);
 
-        server = new GDBDebugServer(target);
+        server = new GDBDebugServer(executionTarget);
         serverLauncher = DSPLauncher.createServerLauncher(server, inServer, outServer);
         serverListening = serverLauncher.startListening();
 
@@ -74,8 +75,8 @@ public class GDBDebugServerTest {
         clientListening = clientLauncher.startListening();
 
         InitializeRequestArguments initializeRequestArguments = new InitializeRequestArguments();
-        initializeRequestArguments.setClientID("com.boris.dsp");
-        initializeRequestArguments.setAdapterID("adapterId");
+        initializeRequestArguments.setClientID("com.test.debug.protocol.client");
+        initializeRequestArguments.setAdapterID("com.coherentchaos.gdb.debugadapter");
         initializeRequestArguments.setPathFormat("path");
         initializeRequestArguments.setSupportsVariableType(true);
         initializeRequestArguments.setSupportsVariablePaging(true);
@@ -87,18 +88,17 @@ public class GDBDebugServerTest {
         result.setSupportsFunctionBreakpoints(false);
         result.setSupportsConditionalBreakpoints(false);
 
+        // Initialize test
         CompletableFuture<?> future = server.initialize(initializeRequestArguments);
         Assert.assertEquals(result.toString(), future.get(TWO_SECONDS, TimeUnit.MILLISECONDS).toString());
         Thread.sleep(HALF_SECOND);
         Assert.assertTrue(client.isInitializedExercised());
-
-        Thread.sleep(TWO_SECONDS);
     }
 
     @org.junit.After
     public void tearDown() throws Exception {
-        clientListening.cancel(true);
-        serverListening.cancel(true);
+        clientListening.cancel(false);
+        serverListening.cancel(false);
         Thread.sleep(HALF_SECOND);
     }
 
@@ -110,14 +110,15 @@ public class GDBDebugServerTest {
      * @throws ExecutionException
      */
     @org.junit.Test
-    public void setBreakpoints() throws InterruptedException, TimeoutException, ExecutionException {
+    public void testSetBreakpoints() throws InterruptedException, TimeoutException, ExecutionException {
         // The test
+        Long breakpointLine = 17L;
         Source source = new Source();
         source.setPath(SOURCE_FILENAME);
         source.setName(new File(SOURCE_FILENAME).getName());
 
         SourceBreakpoint sourceBreakpoint = new SourceBreakpoint();
-        sourceBreakpoint.setLine(Long.valueOf(9));
+        sourceBreakpoint.setLine(breakpointLine);
 
         SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
         setBreakpointsArguments.setSource(source);
@@ -127,24 +128,23 @@ public class GDBDebugServerTest {
         List<Breakpoint> breakpoints = new ArrayList<>();
         Breakpoint breakpoint = new Breakpoint();
         breakpoint.setSource(source);
-        breakpoint.setLine(Long.valueOf(9));
+        breakpoint.setLine(breakpointLine);
         breakpoints.add(breakpoint);
         setBreakpointsResponse.setBreakpoints(breakpoints.toArray(new Breakpoint[breakpoints.size()]));
 
         CompletableFuture<SetBreakpointsResponse> future = server.setBreakpoints(setBreakpointsArguments);
         Assert.assertEquals(setBreakpointsResponse.toString(), future.get(TWO_SECONDS, TimeUnit.MILLISECONDS).toString());
-        Thread.sleep(HALF_SECOND);
     }
 
     /**
-     * Launch target and verify executable exits cleanly
+     * Launch executionTarget and verify executable exits cleanly
      *
      * @throws InterruptedException
      * @throws TimeoutException
      * @throws ExecutionException
      */
     @org.junit.Test
-    public void launch() throws InterruptedException, TimeoutException, ExecutionException {
+    public void testLaunch() throws InterruptedException, TimeoutException, ExecutionException {
         // The test
         CompletableFuture<Void> future = server.launch(new HashMap<>());
         Assert.assertEquals(null, future.get(TWO_SECONDS, TimeUnit.MILLISECONDS));
@@ -154,20 +154,21 @@ public class GDBDebugServerTest {
     }
 
     /**
-     * Set a single breakpoint, launch target, and verify breakpoint is hit and stopped
+     * Set a single breakpoint, testLaunch executionTarget, and verify breakpoint is hit and stopped
      *
      * @throws InterruptedException
      * @throws TimeoutException
      * @throws ExecutionException
      */
     @org.junit.Test
-    public void breakpointHitStopped() throws InterruptedException, TimeoutException, ExecutionException {
+    public void testBreakpointHitStopped() throws InterruptedException, TimeoutException, ExecutionException {
         Source source = new Source();
         source.setPath(SOURCE_FILENAME);
         source.setName(new File(SOURCE_FILENAME).getName());
 
+        Long breakpointLine = 27L;
         SourceBreakpoint sourceBreakpoint = new SourceBreakpoint();
-        sourceBreakpoint.setLine(Long.valueOf(9));
+        sourceBreakpoint.setLine(breakpointLine);
 
         SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
         setBreakpointsArguments.setSource(source);
@@ -177,13 +178,12 @@ public class GDBDebugServerTest {
         List<Breakpoint> breakpoints = new ArrayList<>();
         Breakpoint breakpoint = new Breakpoint();
         breakpoint.setSource(source);
-        breakpoint.setLine(Long.valueOf(9));
+        breakpoint.setLine(breakpointLine);
         breakpoints.add(breakpoint);
         setBreakpointsResponse.setBreakpoints(breakpoints.toArray(new Breakpoint[breakpoints.size()]));
 
         CompletableFuture<?> future = server.setBreakpoints(setBreakpointsArguments);
         Assert.assertEquals(setBreakpointsResponse.toString(), future.get(TWO_SECONDS, TimeUnit.MILLISECONDS).toString());
-        Thread.sleep(HALF_SECOND);
 
         future = server.launch(new HashMap<>());
         Assert.assertEquals(null, future.get(TWO_SECONDS, TimeUnit.MILLISECONDS));
@@ -194,19 +194,20 @@ public class GDBDebugServerTest {
         // The test
         StoppedEventArguments stoppedArgs = new StoppedEventArguments();
         stoppedArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT + ";bkptno=1");
-        stoppedArgs.setThreadId(Long.valueOf(1));
+        stoppedArgs.setThreadId(1L);
         stoppedArgs.setAllThreadsStopped(true);
         Assert.assertEquals(stoppedArgs.toString(), client.getStoppedEventArguments().toString());
     }
 
     @org.junit.Test
-    public void threads() throws InterruptedException, TimeoutException, ExecutionException {
+    public void testThreads() throws InterruptedException, TimeoutException, ExecutionException {
         Source source = new Source();
         source.setPath(SOURCE_FILENAME);
         source.setName(new File(SOURCE_FILENAME).getName());
 
+        Long breakpointLine = 27L;
         SourceBreakpoint sourceBreakpoint = new SourceBreakpoint();
-        sourceBreakpoint.setLine(Long.valueOf(9));
+        sourceBreakpoint.setLine(breakpointLine);
 
         SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
         setBreakpointsArguments.setSource(source);
@@ -216,13 +217,12 @@ public class GDBDebugServerTest {
         List<Breakpoint> breakpoints = new ArrayList<>();
         Breakpoint breakpoint = new Breakpoint();
         breakpoint.setSource(source);
-        breakpoint.setLine(Long.valueOf(9));
+        breakpoint.setLine(breakpointLine);
         breakpoints.add(breakpoint);
         setBreakpointsResponse.setBreakpoints(breakpoints.toArray(new Breakpoint[breakpoints.size()]));
 
         CompletableFuture<?> future = server.setBreakpoints(setBreakpointsArguments);
         Assert.assertEquals(setBreakpointsResponse.toString(), future.get(TWO_SECONDS, TimeUnit.MILLISECONDS).toString());
-        Thread.sleep(HALF_SECOND);
 
         future = server.launch(new HashMap<>());
         Assert.assertEquals(null, future.get(TWO_SECONDS, TimeUnit.MILLISECONDS));
@@ -232,7 +232,7 @@ public class GDBDebugServerTest {
 
         StoppedEventArguments stoppedArgs = new StoppedEventArguments();
         stoppedArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT + ";bkptno=1");
-        stoppedArgs.setThreadId(Long.valueOf(1));
+        stoppedArgs.setThreadId(1L);
         stoppedArgs.setAllThreadsStopped(true);
         Assert.assertEquals(stoppedArgs.toString(), client.getStoppedEventArguments().toString());
 
@@ -240,7 +240,7 @@ public class GDBDebugServerTest {
         ThreadsResponse threadsResponse = new ThreadsResponse();
         org.eclipse.lsp4j.debug.Thread thread = new org.eclipse.lsp4j.debug.Thread();
         thread.setName("helloworld");
-        thread.setId(Long.valueOf(1));
+        thread.setId(1L);
         threadsResponse.setThreads(new org.eclipse.lsp4j.debug.Thread[]{thread});
 
         future = server.threads();
@@ -248,13 +248,14 @@ public class GDBDebugServerTest {
     }
 
     @org.junit.Test
-    public void stackTrace() throws InterruptedException, TimeoutException, ExecutionException {
+    public void testStackTrace() throws InterruptedException, TimeoutException, ExecutionException {
         Source source = new Source();
         source.setPath(SOURCE_FILENAME);
         source.setName(new File(SOURCE_FILENAME).getName());
 
+        Long breakpointLine = 27L;
         SourceBreakpoint sourceBreakpoint = new SourceBreakpoint();
-        sourceBreakpoint.setLine(Long.valueOf(22));
+        sourceBreakpoint.setLine(breakpointLine);
 
         SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
         setBreakpointsArguments.setSource(source);
@@ -264,13 +265,12 @@ public class GDBDebugServerTest {
         List<Breakpoint> breakpoints = new ArrayList<>();
         Breakpoint breakpoint = new Breakpoint();
         breakpoint.setSource(source);
-        breakpoint.setLine(Long.valueOf(22));
+        breakpoint.setLine(breakpointLine);
         breakpoints.add(breakpoint);
         setBreakpointsResponse.setBreakpoints(breakpoints.toArray(new Breakpoint[breakpoints.size()]));
 
         CompletableFuture<?> future = server.setBreakpoints(setBreakpointsArguments);
         Assert.assertEquals(setBreakpointsResponse.toString(), future.get(TWO_SECONDS, TimeUnit.MILLISECONDS).toString());
-        Thread.sleep(HALF_SECOND);
 
         future = server.launch(new HashMap<>());
         Assert.assertEquals(null, future.get(TWO_SECONDS, TimeUnit.MILLISECONDS));
@@ -280,13 +280,13 @@ public class GDBDebugServerTest {
 
         StoppedEventArguments stoppedArgs = new StoppedEventArguments();
         stoppedArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT + ";bkptno=1");
-        stoppedArgs.setThreadId(Long.valueOf(1));
+        stoppedArgs.setThreadId(1L);
         stoppedArgs.setAllThreadsStopped(true);
         Assert.assertEquals(stoppedArgs.toString(), client.getStoppedEventArguments().toString());
 
         // The test
         StackTraceArguments stackTraceArguments = new StackTraceArguments();
-        stackTraceArguments.setThreadId(Long.valueOf(1));
+        stackTraceArguments.setThreadId(1L);
 
         StackTraceResponse stackTraceResponse = new StackTraceResponse();
         List<StackFrame> stackFrames = new ArrayList<>();
@@ -295,17 +295,18 @@ public class GDBDebugServerTest {
         source.setName("helloworld.cpp");
         source.setPath(SOURCE_FILENAME);
 
+        Long threadId = 1L;
         StackFrame stackFrame = new StackFrame();
-        stackFrame.setId(Long.valueOf(0));
-        stackFrame.setLine(Long.valueOf(22));
-        stackFrame.setName("foo");
+        stackFrame.setId(Utils.createUniqueStackFrameId(threadId, 0L));
+        stackFrame.setLine(breakpointLine);
+        stackFrame.setName("foo()");
         stackFrame.setSource(source);
         stackFrames.add(stackFrame);
 
         stackFrame = new StackFrame();
-        stackFrame.setId(Long.valueOf(1));
-        stackFrame.setLine(Long.valueOf(10));
-        stackFrame.setName("main");
+        stackFrame.setId(Utils.createUniqueStackFrameId(threadId, 1L));
+        stackFrame.setLine(10L);
+        stackFrame.setName("main()");
         stackFrame.setSource(source);
         stackFrames.add(stackFrame);
 
@@ -316,13 +317,14 @@ public class GDBDebugServerTest {
     }
 
     @org.junit.Test
-    public void scopes() throws InterruptedException, TimeoutException, ExecutionException {
+    public void testScopes() throws InterruptedException, TimeoutException, ExecutionException {
         Source source = new Source();
         source.setPath(SOURCE_FILENAME);
         source.setName(new File(SOURCE_FILENAME).getName());
 
+        Long breakpointLine = 22L;
         SourceBreakpoint sourceBreakpoint = new SourceBreakpoint();
-        sourceBreakpoint.setLine(Long.valueOf(22));
+        sourceBreakpoint.setLine(breakpointLine);
 
         SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
         setBreakpointsArguments.setSource(source);
@@ -332,13 +334,12 @@ public class GDBDebugServerTest {
         List<Breakpoint> breakpoints = new ArrayList<>();
         Breakpoint breakpoint = new Breakpoint();
         breakpoint.setSource(source);
-        breakpoint.setLine(Long.valueOf(22));
+        breakpoint.setLine(breakpointLine);
         breakpoints.add(breakpoint);
         setBreakpointsResponse.setBreakpoints(breakpoints.toArray(new Breakpoint[breakpoints.size()]));
 
         CompletableFuture<?> future = server.setBreakpoints(setBreakpointsArguments);
         Assert.assertEquals(setBreakpointsResponse.toString(), future.get(TWO_SECONDS, TimeUnit.MILLISECONDS).toString());
-        Thread.sleep(HALF_SECOND);
 
         future = server.launch(new HashMap<>());
         Assert.assertEquals(null, future.get(TWO_SECONDS, TimeUnit.MILLISECONDS));
@@ -346,32 +347,32 @@ public class GDBDebugServerTest {
         Thread.sleep(TWO_SECONDS);
         Assert.assertTrue(client.isStopped());
 
+        Long threadId = 1L;
         StoppedEventArguments stoppedArgs = new StoppedEventArguments();
         stoppedArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT + ";bkptno=1");
-        stoppedArgs.setThreadId(Long.valueOf(1));
+        stoppedArgs.setThreadId(threadId);
         stoppedArgs.setAllThreadsStopped(true);
         Assert.assertEquals(stoppedArgs.toString(), client.getStoppedEventArguments().toString());
 
         // The test
         ScopesArguments scopesArguments = new ScopesArguments();
-        scopesArguments.setFrameId(1L);
+        scopesArguments.setFrameId(Utils.createUniqueStackFrameId(threadId, 0L));
         future = server.scopes(scopesArguments);
         ScopesResponse scopesResponse = (ScopesResponse) future.get(TWO_SECONDS, TimeUnit.MILLISECONDS);
-        Assert.assertEquals(2, scopesResponse.getScopes().length);
+        Assert.assertEquals(1, scopesResponse.getScopes().length);
         Assert.assertEquals("Locals", scopesResponse.getScopes()[0].getName());
         Assert.assertEquals(Long.valueOf(100), scopesResponse.getScopes()[0].getVariablesReference());
-        Assert.assertEquals("Arguments", scopesResponse.getScopes()[1].getName());
-        Assert.assertEquals(Long.valueOf(101), scopesResponse.getScopes()[1].getVariablesReference());
     }
 
     @org.junit.Test
-    public void variables() throws InterruptedException, TimeoutException, ExecutionException {
+    public void testVariables() throws InterruptedException, TimeoutException, ExecutionException {
         Source source = new Source();
         source.setPath(SOURCE_FILENAME);
         source.setName(new File(SOURCE_FILENAME).getName());
 
+        Long breakpointLine = 17L;
         SourceBreakpoint sourceBreakpoint = new SourceBreakpoint();
-        sourceBreakpoint.setLine(Long.valueOf(22));
+        sourceBreakpoint.setLine(breakpointLine);
 
         SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
         setBreakpointsArguments.setSource(source);
@@ -381,13 +382,12 @@ public class GDBDebugServerTest {
         List<Breakpoint> breakpoints = new ArrayList<>();
         Breakpoint breakpoint = new Breakpoint();
         breakpoint.setSource(source);
-        breakpoint.setLine(Long.valueOf(22));
+        breakpoint.setLine(breakpointLine);
         breakpoints.add(breakpoint);
         setBreakpointsResponse.setBreakpoints(breakpoints.toArray(new Breakpoint[breakpoints.size()]));
 
         CompletableFuture<?> future = server.setBreakpoints(setBreakpointsArguments);
         Assert.assertEquals(setBreakpointsResponse.toString(), future.get(TWO_SECONDS, TimeUnit.MILLISECONDS).toString());
-        Thread.sleep(HALF_SECOND);
 
         future = server.launch(new HashMap<>());
         Assert.assertEquals(null, future.get(TWO_SECONDS, TimeUnit.MILLISECONDS));
@@ -395,23 +395,25 @@ public class GDBDebugServerTest {
         Thread.sleep(TWO_SECONDS);
         Assert.assertTrue(client.isStopped());
 
+        Long threadId = 1L;
         StoppedEventArguments stoppedArgs = new StoppedEventArguments();
         stoppedArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT + ";bkptno=1");
-        stoppedArgs.setThreadId(Long.valueOf(1));
+        stoppedArgs.setThreadId(threadId);
         stoppedArgs.setAllThreadsStopped(true);
         Assert.assertEquals(stoppedArgs.toString(), client.getStoppedEventArguments().toString());
 
         ScopesArguments scopesArguments = new ScopesArguments();
-        scopesArguments.setFrameId(0L);
+        scopesArguments.setFrameId(Utils.createUniqueStackFrameId(threadId, 0L));
         future = server.scopes(scopesArguments);
         ScopesResponse scopesResponse = (ScopesResponse) future.get(TWO_SECONDS, TimeUnit.MILLISECONDS);
 
         // The test (it is required that scopes is called before calling variables)
         VariablesResponse variablesResponse = new VariablesResponse();
         Variable variable = new Variable();
-        variable.setName("numPlanets");
-        variable.setValue(String.valueOf(8));
+        variable.setName("numFubars");
+        variable.setValue(String.valueOf(-42));
         variablesResponse.setVariables(new Variable[]{variable});
+        variable.setVariablesReference(100L);
 
         VariablesArguments variablesArguments = new VariablesArguments();
         variablesArguments.setVariablesReference(scopesResponse.getScopes()[0].getVariablesReference());
@@ -421,13 +423,14 @@ public class GDBDebugServerTest {
     }
 
     @org.junit.Test
-    public void continue_() throws InterruptedException, TimeoutException, ExecutionException {
+    public void testContinue_() throws InterruptedException, TimeoutException, ExecutionException {
         Source source = new Source();
         source.setPath(SOURCE_FILENAME);
         source.setName(new File(SOURCE_FILENAME).getName());
 
+        Long breakpointLine = 22L;
         SourceBreakpoint sourceBreakpoint = new SourceBreakpoint();
-        sourceBreakpoint.setLine(Long.valueOf(22));
+        sourceBreakpoint.setLine(breakpointLine);
 
         SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
         setBreakpointsArguments.setSource(source);
@@ -437,13 +440,12 @@ public class GDBDebugServerTest {
         List<Breakpoint> breakpoints = new ArrayList<>();
         Breakpoint breakpoint = new Breakpoint();
         breakpoint.setSource(source);
-        breakpoint.setLine(Long.valueOf(22));
+        breakpoint.setLine(breakpointLine);
         breakpoints.add(breakpoint);
         setBreakpointsResponse.setBreakpoints(breakpoints.toArray(new Breakpoint[breakpoints.size()]));
 
         CompletableFuture<?> future = server.setBreakpoints(setBreakpointsArguments);
         Assert.assertEquals(setBreakpointsResponse.toString(), future.get(TWO_SECONDS, TimeUnit.MILLISECONDS).toString());
-        Thread.sleep(HALF_SECOND);
 
         future = server.launch(new HashMap<>());
         Assert.assertEquals(null, future.get(TWO_SECONDS, TimeUnit.MILLISECONDS));
@@ -451,9 +453,10 @@ public class GDBDebugServerTest {
         Thread.sleep(TWO_SECONDS);
         Assert.assertTrue(client.isStopped());
 
+        Long threadId = 1L;
         StoppedEventArguments stoppedArgs = new StoppedEventArguments();
         stoppedArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT + ";bkptno=1");
-        stoppedArgs.setThreadId(Long.valueOf(1));
+        stoppedArgs.setThreadId(threadId);
         stoppedArgs.setAllThreadsStopped(true);
         Assert.assertEquals(stoppedArgs.toString(), client.getStoppedEventArguments().toString());
 
@@ -465,5 +468,7 @@ public class GDBDebugServerTest {
         future = server.continue_(continueArguments);
 
         Assert.assertEquals(continueResponse.toString(), future.get(TWO_SECONDS, TimeUnit.MILLISECONDS).toString());
+
+        // TODO test threads are running again, look for continued event I think
     }
 }
