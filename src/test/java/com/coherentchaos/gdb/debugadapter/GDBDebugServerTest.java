@@ -24,7 +24,6 @@ public class GDBDebugServerTest {
     private static final int TWO_SECONDS = 2000;
     private static final int ONE_SECOND = 1000;
     private static final int HALF_SECOND = 500;
-    private static final String[] makeCmdLine = {"make", "-f", "makefile"};
     private final String TEST_CASE_DIR = this.getClass().getResource("/helloworld").getPath();
     private final String SOURCE_FILENAME = this.getClass().getResource("/helloworld/helloworld.cpp").getPath();
     private final String TARGET_FILENAME = String.format("%s/helloworld", TEST_CASE_DIR);
@@ -37,17 +36,6 @@ public class GDBDebugServerTest {
     private Launcher<IDebugProtocolServer> clientLauncher;
     private Future<?> clientListening;
 
-    private void compileHelloWorldExe() {
-        try {
-            ProcessBuilder processBuilder = new ProcessBuilder(makeCmdLine);
-            processBuilder.directory(new File(TEST_CASE_DIR));
-            processBuilder.start();
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     /**
      * Exercise initialize handshake with server
      *
@@ -55,7 +43,8 @@ public class GDBDebugServerTest {
      */
     @org.junit.Before
     public void setUp() throws Exception {
-        compileHelloWorldExe();
+        TestUtils.compileExecutionTarget(TEST_CASE_DIR);
+        Assert.assertTrue(new File(TARGET_FILENAME).exists());
 
         PipedInputStream inClient = new PipedInputStream();
         PipedOutputStream outClient = new PipedOutputStream();

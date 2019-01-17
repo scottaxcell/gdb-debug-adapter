@@ -277,18 +277,19 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<StackTraceResponse> stackTrace(StackTraceArguments args) {
+        // TODO add support for startFrame
         final int token = queueCommand(StackListFramesCommand.of(ExecutionContext.of(args.getThreadId())));
-        Supplier<StackTraceResponse> supplier = setStackTraceResponseSupplier(token, args.getThreadId());
+        Supplier<StackTraceResponse> supplier = setStackTraceResponseSupplier(token, args.getThreadId(), args.getLevels());
         return CompletableFuture.supplyAsync(supplier, asyncExecutor);
     }
 
-    private Supplier<StackTraceResponse> setStackTraceResponseSupplier(int token, Long threadId) {
+    private Supplier<StackTraceResponse> setStackTraceResponseSupplier(int token, Long threadId, Long levels) {
         return () -> {
             // TODO start timer to flag any commandWrapper that doesn't get a response
             while (true) {
                 if (readCommands.containsKey(token)) {
                     CommandWrapper commandWrapper = readCommands.remove(token);
-                    return getStackTraceResponse(commandWrapper, threadId);
+                    return getStackTraceResponse(commandWrapper, threadId, levels);
                 }
                 try {
                     Thread.sleep(200);
@@ -299,10 +300,11 @@ public class GDBDebugServer implements IDebugProtocolServer {
         };
     }
 
-    private StackTraceResponse getStackTraceResponse(CommandWrapper commandWrapper, Long threadId) {
+    private StackTraceResponse getStackTraceResponse(CommandWrapper commandWrapper, Long threadId, Long levels) {
         CommandResponse commandResponse = commandWrapper.getCommandResponse();
         Output output = commandResponse.getOutput();
-        StackTraceResponse response = OutputParser.parseStackListFramesResponse(output);
+        StackTraceResponse response = OutputParser.parseStackListFramesResponse(output, levels);
+
         for (StackFrame stackFrame : response.getStackFrames()) {
             Long stackFrameId = stackFrame.getId();
             Long uniqueStackFrameId = Utils.createUniqueStackFrameId(threadId, stackFrameId);

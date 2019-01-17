@@ -81,7 +81,7 @@ public class OutputParser {
         return thread;
     }
 
-    public static StackTraceResponse parseStackListFramesResponse(Output output) {
+    public static StackTraceResponse parseStackListFramesResponse(Output output, Long levels) {
         StackTraceResponse response = new StackTraceResponse();
         List<StackFrame> stackFrames = new ArrayList<>();
 
@@ -94,8 +94,10 @@ public class OutputParser {
                     parseStack((MIList) val, stackFrames);
             }
         }
-
-        response.setStackFrames(stackFrames.toArray(new StackFrame[stackFrames.size()]));
+        if (levels != null && levels != 0L)
+            response.setStackFrames(stackFrames.subList(0, Math.toIntExact(levels)).toArray(new StackFrame[Math.toIntExact(levels)]));
+        else
+            response.setStackFrames(stackFrames.toArray(new StackFrame[stackFrames.size()]));
 
         return response;
     }

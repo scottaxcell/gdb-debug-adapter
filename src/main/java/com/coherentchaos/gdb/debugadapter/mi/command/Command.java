@@ -75,9 +75,9 @@ public class Command {
 
         ExecutionContext ec = executionContext.get();
         if (ec.getThreadId().isPresent()) {
-            stringBuilder.append("--thread ").append(ec.getThreadId());
+            stringBuilder.append("--thread ").append(ec.getThreadId().get());
             if (ec.getFrameId().isPresent())
-                stringBuilder.append(" --frame ").append(ec.getFrameId());
+                stringBuilder.append(" --frame ").append(ec.getFrameId().get());
         }
 
         return stringBuilder.toString();
@@ -87,7 +87,7 @@ public class Command {
         StringBuilder command = new StringBuilder(getOperation());
 
         String executionContext = executionContextToString();
-        if (executionContext.isEmpty())
+        if (!executionContext.isEmpty())
             command.append(' ').append(executionContext);
 
         String options = optionsToString();
