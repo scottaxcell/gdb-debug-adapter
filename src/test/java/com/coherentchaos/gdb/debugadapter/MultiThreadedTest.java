@@ -9,7 +9,6 @@ import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.junit.Assert;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.lang.Thread;

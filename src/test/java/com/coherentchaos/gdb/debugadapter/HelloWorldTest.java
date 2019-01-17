@@ -1,6 +1,5 @@
 package com.coherentchaos.gdb.debugadapter;
 
-import com.coherentchaos.gdb.debugadapter.utils.Cantor;
 import com.coherentchaos.gdb.debugadapter.utils.Utils;
 import org.eclipse.lsp4j.debug.*;
 import org.eclipse.lsp4j.debug.launch.DSPLauncher;
@@ -10,7 +9,6 @@ import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.junit.Assert;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.lang.Thread;
@@ -19,7 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.*;
 
-public class GDBDebugServerTest {
+public class HelloWorldTest {
     private static final int THREE_SECONDS = 3000;
     private static final int TWO_SECONDS = 2000;
     private static final int ONE_SECOND = 1000;
@@ -451,7 +449,7 @@ public class GDBDebugServerTest {
 
         // The test
         ContinueResponse continueResponse = new ContinueResponse();
-        continueResponse.setAllThreadsContinued(true);
+        continueResponse.setAllThreadsContinued(false);
 
         ContinueArguments continueArguments = new ContinueArguments();
         future = server.continue_(continueArguments);

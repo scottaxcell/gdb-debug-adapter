@@ -1,8 +1,8 @@
 package com.coherentchaos.gdb.debugadapter.mi.output;
 
 import com.coherentchaos.gdb.debugadapter.mi.record.ResultRecord;
-import org.eclipse.lsp4j.debug.Thread;
 import org.eclipse.lsp4j.debug.*;
+import org.eclipse.lsp4j.debug.Thread;
 
 import java.util.ArrayList;
 import java.util.List;

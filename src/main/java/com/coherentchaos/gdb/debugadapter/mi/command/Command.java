@@ -2,8 +2,6 @@ package com.coherentchaos.gdb.debugadapter.mi.command;
 
 import com.coherentchaos.gdb.debugadapter.ExecutionContext;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 

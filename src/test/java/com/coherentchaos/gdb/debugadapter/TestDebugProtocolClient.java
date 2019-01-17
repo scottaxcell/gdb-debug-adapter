@@ -3,14 +3,6 @@ package com.coherentchaos.gdb.debugadapter;
 import org.eclipse.lsp4j.debug.ExitedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
-import org.eclipse.lsp4j.jsonrpc.Endpoint;
-import org.eclipse.xtext.xbase.lib.Pair;
-import org.eclipse.xtext.xbase.lib.util.ToStringBuilder;
-import org.junit.Assert;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public class TestDebugProtocolClient implements IDebugProtocolClient {
     private boolean initializedExercised;

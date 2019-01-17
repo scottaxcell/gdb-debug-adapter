@@ -1,7 +1,6 @@
 package com.coherentchaos.gdb.debugadapter.utils;
 
 import java.util.Arrays;
-import java.util.Objects;
 
 /**
  * In mathematics, a pairing function is a process to uniquely encode two

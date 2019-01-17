@@ -36,7 +36,7 @@ public class GDBDebugServer implements IDebugProtocolServer {
      */
     private final Map<Integer, CommandWrapper> readCommands = Collections.synchronizedMap(new HashMap<>());
     private ExecutionTarget executionTarget;
-    private GDBBackend backend;
+    private GDBBackend gdbBackend;
     private GDBReaderThread gdbReaderThread;
     private GDBWriterThread gdbWriterThread;
     private IDebugProtocolClient client;
@@ -74,20 +74,20 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<RunInTerminalResponse> runInTerminal(RunInTerminalRequestArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<Capabilities> initialize(InitializeRequestArguments args) {
         Utils.debug("initialize");
 
-        backend = new GDBBackend(executionTarget);
-        backend.startGDB();
+        gdbBackend = new GDBBackend(executionTarget);
+        gdbBackend.startGDB();
 
-        gdbReaderThread = new GDBReaderThread(backend.getInputStream());
+        gdbReaderThread = new GDBReaderThread(gdbBackend.getInputStream());
         gdbReaderThread.start();
 
-        gdbWriterThread = new GDBWriterThread(backend.getOutputStream());
+        gdbWriterThread = new GDBWriterThread(gdbBackend.getOutputStream());
         gdbWriterThread.start();
 
         Capabilities capabilities = new Capabilities();
@@ -112,19 +112,19 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<Void> attach(Map<String, Object> args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<Void> restart(RestartArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<Void> disconnect(DisconnectArguments args) {
         // TODO disconnect from debuggee
         // TODO kill debug adapter
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
@@ -142,9 +142,8 @@ public class GDBDebugServer implements IDebugProtocolServer {
         String path = source.getPath();
         for (SourceBreakpoint breakpoint : args.getBreakpoints()) {
             Long line = breakpoint.getLine();
-            StringBuilder stringBuilder = new StringBuilder(path);
-            stringBuilder.append(':').append(line);
-            final int token = queueCommand(BreakInsertCommand.of(stringBuilder.toString()));
+            String breakpointLocation = String.format("%s:%s", path, line);
+            final int token = queueCommand(BreakInsertCommand.of(breakpointLocation));
             tokens.add(token);
         }
 
@@ -192,12 +191,12 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<SetFunctionBreakpointsResponse> setFunctionBreakpoints(SetFunctionBreakpointsArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<Void> setExceptionBreakpoints(SetExceptionBreakpointsArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
@@ -213,8 +212,8 @@ public class GDBDebugServer implements IDebugProtocolServer {
             while (true) {
                 if (readCommands.containsKey(token)) {
                     synchronized (readCommands) {
-                        CommandWrapper commandWrapper = readCommands.remove(token);
-                        return getContinueResponse(commandWrapper);
+                        readCommands.remove(token);
+                        return getContinueResponse();
                     }
                 }
                 try {
@@ -226,9 +225,9 @@ public class GDBDebugServer implements IDebugProtocolServer {
         };
     }
 
-    private ContinueResponse getContinueResponse(CommandWrapper commandWrapper) {
+    private ContinueResponse getContinueResponse() {
         ContinueResponse response = new ContinueResponse();
-        response.setAllThreadsContinued(true);
+        response.setAllThreadsContinued(false);
         return response;
     }
 
@@ -252,27 +251,27 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<Void> stepBack(StepBackArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<Void> reverseContinue(ReverseContinueArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<Void> restartFrame(RestartFrameArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<Void> goto_(GotoArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<Void> pause(PauseArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
@@ -379,12 +378,12 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<SetVariableResponse> setVariable(SetVariableArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<SourceResponse> source(SourceArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
@@ -420,47 +419,47 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<Void> terminateThreads(TerminateThreadsArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<ModulesResponse> modules(ModulesArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<LoadedSourcesResponse> loadedSources(LoadedSourcesArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<EvaluateResponse> evaluate(EvaluateArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<SetExpressionResponse> setExpression(SetExpressionArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<StepInTargetsResponse> stepInTargets(StepInTargetsArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<GotoTargetsResponse> gotoTargets(GotoTargetsArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<CompletionsResponse> completions(CompletionsArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     @Override
     public CompletableFuture<ExceptionInfoResponse> exceptionInfo(ExceptionInfoArguments args) {
-        return CompletableFuture.completedFuture(null);
+        throw new UnsupportedOperationException("interface not implemented yet..");
     }
 
     public void setRemoteProxy(IDebugProtocolClient client) {
@@ -491,23 +490,6 @@ public class GDBDebugServer implements IDebugProtocolServer {
         if (!initialized.isDone() || eventProcessor == null)
             return;
         eventExecutor.execute(() -> eventProcessor.notifyClientOfInitialized());
-    }
-
-    private int processNextQueuedCommand() {
-//        int token = -1;
-//        if (!commandQueue.isEmpty()) {
-//            final CommandWrapper commandWrapper = commandQueue.remove(0);
-//            if (commandWrapper != null) {
-//                if (commandWrapper.getCommand().isRequiresResponse()) {
-//                    commandWrapper.generateToken();
-//                    token = commandWrapper.getToken();
-//                }
-////                writtenCommands.add(commandWrapper);
-//                Utils.dsp(commandWrapper.getCommand().constructCommand() + " processed..");
-//            }
-//        }
-//        return token;
-        return -1;
     }
 
     private void processEvent(Output output) {
@@ -753,7 +735,7 @@ public class GDBDebugServer implements IDebugProtocolServer {
         public void run() {
             CommandWrapper writtenCommand = getWrittenCommand(commandWrapper.getToken());
             if (writtenCommand != null) {
-                String msg = this.getClass().getSimpleName() + " " + writtenCommand.getCommand().constructCommand() + " did not received a response in time";
+                String msg = writtenCommand.getCommand().constructCommand() + " did not received a response in time";
                 Logger.getInstance().warning(msg);
                 throw new RuntimeException(msg);
             }
