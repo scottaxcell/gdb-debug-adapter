@@ -1,9 +1,16 @@
 package com.coherentchaos.gdb.debugadapter.mi.command;
 
-import java.util.Arrays;
+import com.coherentchaos.gdb.debugadapter.ExecutionContext;
+
+import java.util.Optional;
 
 public class StackListLocalsCommand extends Command {
-    public StackListLocalsCommand() {
-        super("-stack-list-locals", Arrays.asList(new String[]{"1"}));
+    private StackListLocalsCommand(ExecutionContext executionContext) {
+        super("-stack-list-locals", Optional.ofNullable(executionContext), new String[]{"--all-values"});
+        setRequiresResponse(true);
+    }
+
+    public static StackListLocalsCommand of(ExecutionContext executionContext) {
+        return new StackListLocalsCommand(executionContext);
     }
 }

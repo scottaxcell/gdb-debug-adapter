@@ -1,8 +1,14 @@
 package com.coherentchaos.gdb.debugadapter.mi.command;
 
+import java.util.Optional;
+
 public class BreakDeleteCommand extends com.coherentchaos.gdb.debugadapter.mi.command.Command {
-    // TODO add support for deleting single breakpoints
-    public BreakDeleteCommand() {
-        super("-break-delete");
+    private BreakDeleteCommand() {
+        super("-break-delete", Optional.empty());
+        setIgnoreResponse(true);
+    }
+
+    public static BreakDeleteCommand of() {
+        return new BreakDeleteCommand();
     }
 }

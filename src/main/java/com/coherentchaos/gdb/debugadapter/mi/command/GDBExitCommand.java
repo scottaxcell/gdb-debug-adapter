@@ -1,7 +1,13 @@
 package com.coherentchaos.gdb.debugadapter.mi.command;
 
+import java.util.Optional;
+
 public class GDBExitCommand extends Command {
-    public GDBExitCommand() {
-        super("-gdb-exit");
+    private GDBExitCommand() {
+        super("-gdb-exit", Optional.empty());
+    }
+
+    public static GDBExitCommand of() {
+        return new GDBExitCommand();
     }
 }

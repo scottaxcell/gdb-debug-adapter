@@ -23,7 +23,6 @@ import java.util.function.Supplier;
  * GDB Server - implements DAP interface
  */
 public class GDBDebugServer implements IDebugProtocolServer {
-    private final CommandFactory commandFactory = new CommandFactory();
     /**
      * Commands that need to be processed
      */
@@ -107,9 +106,7 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<Void> launch(Map<String, Object> args) {
-        ExecRunCommand execRunCommand = commandFactory.createExecRun();
-        queueCommand(execRunCommand);
-
+        queueCommand(ExecRunCommand.of());
         return CompletableFuture.completedFuture(null);
     }
 
@@ -132,17 +129,13 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<Void> terminate(TerminateArguments args) {
-        if (args == null) {
-            GDBExitCommand exitCommand = commandFactory.createGDBExit();
-            queueCommand(exitCommand);
-        }
+        queueCommand(GDBExitCommand.of());
         return CompletableFuture.completedFuture(null);
     }
 
     @Override
     public CompletableFuture<SetBreakpointsResponse> setBreakpoints(SetBreakpointsArguments args) {
-        BreakDeleteCommand breakDeleteCommand = commandFactory.createBreakDelete();
-        queueCommand(breakDeleteCommand);
+        queueCommand(BreakDeleteCommand.of());
 
         List<Integer> tokens = new ArrayList<>();
         Source source = args.getSource();
@@ -151,8 +144,7 @@ public class GDBDebugServer implements IDebugProtocolServer {
             Long line = breakpoint.getLine();
             StringBuilder stringBuilder = new StringBuilder(path);
             stringBuilder.append(':').append(line);
-            BreakInsertCommand breakInsertCommand = commandFactory.createBreakInsert(stringBuilder.toString());
-            final int token = queueCommand(breakInsertCommand);
+            final int token = queueCommand(BreakInsertCommand.of(stringBuilder.toString()));
             tokens.add(token);
         }
 
@@ -167,10 +159,8 @@ public class GDBDebugServer implements IDebugProtocolServer {
             while (commandResponses.size() != tokens.size()) {
                 for (Integer token : tokens) {
                     if (readCommands.containsKey(token)) {
-                        synchronized (readCommands) {
-                            CommandWrapper commandWrapper = readCommands.remove(token);
-                            commandResponses.add(commandWrapper);
-                        }
+                        CommandWrapper commandWrapper = readCommands.remove(token);
+                        commandResponses.add(commandWrapper);
                     }
                 }
                 try {
@@ -212,9 +202,7 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<ContinueResponse> continue_(ContinueArguments args) {
-        // TODO add support for continuing a single thread
-        ExecContinueCommand execContinue = commandFactory.createExecContinue();
-        final int token = queueCommand(execContinue);
+        final int token = queueCommand(ExecContinueCommand.of(ExecutionContext.of(args.getThreadId())));
         Supplier<ContinueResponse> supplier = continueResponseSupplier(token);
         return CompletableFuture.supplyAsync(supplier, asyncExecutor);
     }
@@ -246,34 +234,19 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<Void> next(NextArguments args) {
-        if (args.getThreadId() != null) {
-            ThreadSelectCommand threadSelectCommand = commandFactory.createThreadSelect(args.getThreadId());
-            queueCommand(threadSelectCommand);
-        }
-        ExecNextCommand nextCommand = commandFactory.createExecNext();
-        queueCommand(nextCommand);
+        queueCommand(ExecNextCommand.of(ExecutionContext.of(args.getThreadId())));
         return CompletableFuture.completedFuture(null);
     }
 
     @Override
     public CompletableFuture<Void> stepIn(StepInArguments args) {
-        if (args.getThreadId() != null) {
-            ThreadSelectCommand threadSelectCommand = commandFactory.createThreadSelect(args.getThreadId());
-            queueCommand(threadSelectCommand);
-        }
-        ExecStepCommand stepCommand = commandFactory.createExecStep();
-        queueCommand(stepCommand);
+        queueCommand(ExecStepCommand.of(ExecutionContext.of(args.getThreadId())));
         return CompletableFuture.completedFuture(null);
     }
 
     @Override
     public CompletableFuture<Void> stepOut(StepOutArguments args) {
-        if (args.getThreadId() != null) {
-            ThreadSelectCommand threadSelectCommand = commandFactory.createThreadSelect(args.getThreadId());
-            queueCommand(threadSelectCommand);
-        }
-        ExecReturnCommand execReturnCommand = commandFactory.createExecReturn();
-        queueCommand(execReturnCommand);
+        queueCommand(ExecReturnCommand.of(ExecutionContext.of(args.getThreadId())));
         return CompletableFuture.completedFuture(null);
     }
 
@@ -304,11 +277,7 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<StackTraceResponse> stackTrace(StackTraceArguments args) {
-        ThreadSelectCommand threadSelectCommand = commandFactory.createThreadSelect(args.getThreadId());
-        queueCommand(threadSelectCommand);
-
-        StackListFramesCommand stackListFramesCommand = commandFactory.createStackListFrames();
-        final int token = queueCommand(stackListFramesCommand);
+        final int token = queueCommand(StackListFramesCommand.of(ExecutionContext.of(args.getThreadId())));
         Supplier<StackTraceResponse> supplier = setStackTraceResponseSupplier(token, args.getThreadId());
         return CompletableFuture.supplyAsync(supplier, asyncExecutor);
     }
@@ -369,15 +338,8 @@ public class GDBDebugServer implements IDebugProtocolServer {
         Long threadId = threadAndStackFrameIds[0];
         Long frameId = threadAndStackFrameIds[1];
 
-        ThreadSelectCommand threadSelectCommand = commandFactory.createThreadSelect(threadId);
-        queueCommand(threadSelectCommand);
-
-        StackSelectFrameCommand stackSelectFrameCommand = commandFactory.createStackSelectFrame(frameId);
-        queueCommand(stackSelectFrameCommand);
-
         if ("Locals".equals(type)) {
-            StackListLocalsCommand stackListLocalsCommand = commandFactory.createStackListLocals();
-            final int token = queueCommand(stackListLocalsCommand);
+            final int token = queueCommand(StackListLocalsCommand.of(ExecutionContext.of(threadId, frameId)));
             Supplier<VariablesResponse> supplier = setVariablesResponseSupplier(token, args.getVariablesReference());
             return CompletableFuture.supplyAsync(supplier, asyncExecutor);
         }
@@ -425,8 +387,7 @@ public class GDBDebugServer implements IDebugProtocolServer {
 
     @Override
     public CompletableFuture<ThreadsResponse> threads() {
-        ThreadsInfoCommand threadsInfoCommand = commandFactory.createThreadsInfo();
-        final int token = queueCommand(threadsInfoCommand);
+        final int token = queueCommand(ThreadsInfoCommand.of());
         Supplier<ThreadsResponse> supplier = setThreadsResponseSupplier(token);
         return CompletableFuture.supplyAsync(supplier, asyncExecutor);
     }
@@ -611,9 +572,7 @@ public class GDBDebugServer implements IDebugProtocolServer {
                     break;
                 }
 
-                synchronized (writtenCommands) {
-                    writtenCommands.add(commandWrapper);
-                }
+                writtenCommands.add(commandWrapper);
 
                 StringBuilder commandBuilder = new StringBuilder();
                 if (commandWrapper.getCommand().isRequiresResponse())
@@ -683,9 +642,7 @@ public class GDBDebugServer implements IDebugProtocolServer {
                 int token = resultRecord.getToken();
                 CommandWrapper commandWrapper = getWrittenCommand(token);
                 if (commandWrapper != null) {
-                    synchronized (writtenCommands) {
-                        writtenCommands.remove(commandWrapper);
-                    }
+                    writtenCommands.remove(commandWrapper);
 
                     if (!commandWrapper.getCommand().isIgnoreResponse()) {
                         Output output = new Output(resultRecord);

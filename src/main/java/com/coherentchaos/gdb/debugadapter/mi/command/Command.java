@@ -1,27 +1,31 @@
 package com.coherentchaos.gdb.debugadapter.mi.command;
 
+import com.coherentchaos.gdb.debugadapter.ExecutionContext;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class Command {
+    private static String[] EMPTY = new String[]{};
     private String operation;
-    private List<String> parameters;
-    private List<String> options;
+    private String[] parameters = EMPTY;
+    private String[] options = EMPTY;
     private boolean requiresResponse;
     private boolean ignoreResponse;
     private int hashCode;
+    Optional<ExecutionContext> executionContext;
 
-    public Command(String operation) {
+    public Command(String operation, Optional<ExecutionContext> executionContext) {
         this.operation = operation;
-        parameters = new ArrayList<>();
-        options = new ArrayList<>();
+        this.executionContext = executionContext;
     }
 
-    public Command(String operation, List<String> parameters) {
+    public Command(String operation, Optional<ExecutionContext> executionContext, String[] parameters) {
         this.operation = operation;
         this.parameters = parameters;
-        options = new ArrayList<>();
+        this.executionContext = executionContext;
     }
 
     public boolean isRequiresResponse() {
@@ -48,25 +52,43 @@ public class Command {
         this.operation = operation;
     }
 
-    public List<String> getParameters() {
+    public String[] getParameters() {
         return parameters;
     }
 
-    public void setParameters(List<String> parameters) {
+    public void setParameters(String[] parameters) {
         this.parameters = parameters;
     }
 
-    public List<String> getOptions() {
+    public String[] getOptions() {
         return options;
     }
 
-    public void setOptions(List<String> options) {
+    public void setOptions(String[] options) {
         this.options = options;
+    }
+
+    private String executionContextToString() {
+        StringBuilder stringBuilder = new StringBuilder();
+        if (!executionContext.isPresent())
+            return stringBuilder.toString();
+
+        ExecutionContext ec = executionContext.get();
+        if (ec.getThreadId().isPresent()) {
+            stringBuilder.append("--thread ").append(ec.getThreadId());
+            if (ec.getFrameId().isPresent())
+                stringBuilder.append(" --frame ").append(ec.getFrameId());
+        }
+
+        return stringBuilder.toString();
     }
 
     public String constructCommand() {
         StringBuilder command = new StringBuilder(getOperation());
-        // TODO --thread, --thread-group, and --frame support
+
+        String executionContext = executionContextToString();
+        if (executionContext.isEmpty())
+            command.append(' ').append(executionContext);
 
         String options = optionsToString();
         if (!options.isEmpty())

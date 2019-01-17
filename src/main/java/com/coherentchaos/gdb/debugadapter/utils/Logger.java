@@ -6,8 +6,8 @@ import java.util.logging.SimpleFormatter;
 
 public class Logger {
     private static java.util.logging.Logger INSTANCE;
-    private static String LOGGER_NAME = "Boris Logger";
-    private static String LOG_FILE = "boris.log";
+    private static String LOGGER_NAME = "GDB Debug Adapter Logger";
+    private static String LOG_FILE = "gdb-debug-dapter.log";
 
     private Logger() {
         throw new AssertionError("Do not call private constructor");

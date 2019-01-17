@@ -1,28 +1,14 @@
 package com.coherentchaos.gdb.debugadapter.mi.command;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
 
 public class BreakInsertCommand extends Command {
-    private String location;
-
-    public BreakInsertCommand(String location) {
-        super("-break-insert");
-        this.location = location;
-        setParameters();
+    private BreakInsertCommand(String location) {
+        super("-break-insert", Optional.empty(), new String[]{location});
+        setRequiresResponse(true);
     }
 
-    public String getLocation() {
-        return location;
-    }
-
-    public void setLocation(String location) {
-        this.location = location;
-    }
-
-    public void setParameters() {
-        List<String> parameters = new ArrayList<>();
-        parameters.add(getLocation());
-        setParameters(parameters);
+    public static BreakInsertCommand of (String location) {
+        return new BreakInsertCommand(location);
     }
 }
